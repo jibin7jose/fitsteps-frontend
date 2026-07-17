@@ -166,9 +166,13 @@ const Goals = () => {
                 <p className="text-slate-400">Create your first goal to start tracking your progress!</p>
               </div>
             ) : (
-              goals.map((goal) => (
-                <div key={goal.id} className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-lg flex flex-col sm:flex-row sm:items-center justify-between hover:border-emerald-500/30 transition-colors group">
-                  <div className="flex items-center mb-4 sm:mb-0">
+              goals.map((goal) => {
+                const progressPercentage = Math.min(100, Math.round(((goal.current_progress || 0) / goal.target) * 100));
+                
+                return (
+                  <div key={goal.id} className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-lg hover:border-emerald-500/30 transition-colors group">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-5">
+                      <div className="flex items-center mb-4 sm:mb-0">
                     <div className="bg-slate-950 p-4 rounded-xl mr-5 group-hover:scale-110 transition-transform">
                       {getGoalIcon(goal.goal_type)}
                     </div>
@@ -216,8 +220,22 @@ const Goals = () => {
                     )}
                   </div>
                 </div>
-              ))
-            )}
+                
+                {/* Progress Bar */}
+                <div className="w-full bg-slate-800 rounded-full h-3">
+                  <div 
+                    className={`h-3 rounded-full ${progressPercentage >= 100 ? 'bg-emerald-400' : 'bg-emerald-500'}`} 
+                    style={{ width: `${progressPercentage}%` }}
+                  ></div>
+                </div>
+                <div className="flex justify-between text-xs text-slate-400 mt-2 font-medium">
+                  <span>{(goal.current_progress || 0).toLocaleString()} progress</span>
+                  <span className={progressPercentage >= 100 ? 'text-emerald-400' : ''}>{progressPercentage}% completed</span>
+                </div>
+              </div>
+            );
+          })
+        )}
           </div>
         </div>
       </div>
