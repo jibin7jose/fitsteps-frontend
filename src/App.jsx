@@ -4,6 +4,9 @@ import { AuthContext } from './context/AuthContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import Achievements from './pages/Achievements';
+import Goals from './pages/Goals';
+import Leaderboard from './pages/Leaderboard';
 import Navbar from './components/Navbar';
 
 const ProtectedRoute = ({ children }) => {
@@ -31,8 +34,30 @@ function App() {
             </ProtectedRoute>
           } 
         />
-        {/* Placeholder routes for future expansion */}
-        <Route path="/goals" element={<ProtectedRoute><div className="p-8 text-center">Goals Page Coming Soon</div></ProtectedRoute>} />
+        <Route 
+          path="/achievements" 
+          element={
+            <ProtectedRoute>
+              <Achievements />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/goals" 
+          element={
+            <ProtectedRoute>
+              <Goals />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/leaderboard" 
+          element={
+            <ProtectedRoute>
+              <Leaderboard />
+            </ProtectedRoute>
+          } 
+        />
       </Routes>
     </div>
   );
