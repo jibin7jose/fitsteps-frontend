@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Flame, Trophy, Activity, Plus, X, Download, Target, Calendar, Star, BrainCircuit, MessageSquare, Coffee } from 'lucide-react';
-import { format, parseISO, startOfDay, endOfDay, startOfWeek, endOfWeek, subDays } from 'date-fns';
+import { format, parseISO, startOfDay, endOfDay, startOfWeek, endOfWeek, subDays, eachDayOfInterval, eachHourOfInterval, isSameDay } from 'date-fns';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 
@@ -59,10 +59,19 @@ const Dashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      const [analyticsRes] = await Promise.all([
-        api.get('/analytics/')
-      ]);
-      setAnalytics(analyticsRes.data);
+      let analyticsData = {
+        weekly_step_average: 0,
+        best_day: { date: null, steps: 0 },
+        best_week: { date: null, steps: 0 },
+        goal_completion_rate: 0
+      };
+      try {
+        const analyticsRes = await api.get('/analytics/');
+        analyticsData = analyticsRes.data;
+      } catch (analyticsError) {
+        console.error("Error fetching analytics (backend might still be deploying):", analyticsError);
+      }
+      setAnalytics(analyticsData);
       
       // Get AI Recommendation silently
       api.post('/ai/recommendation').then(res => setAiRecommendation(res.data)).catch(console.error);
@@ -115,6 +124,14 @@ const Dashboard = () => {
     return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-emerald-400">Loading your data...</div>;
   }
 
+  // Helper to parse dates correctly as UTC
+  const parseUTCDate = (dateString) => {
+    if (!dateString) return new Date();
+    // If the string doesn't end with Z, append it to treat it as UTC
+    const utcString = dateString.endsWith('Z') ? dateString : `${dateString}Z`;
+    return parseISO(utcString);
+  };
+
   // Format chart data
   let chartData = [];
   
@@ -123,45 +140,82 @@ const Dashboard = () => {
     const endStr = format(endDate, 'yyyy-MM-dd');
     
     if (startStr === endStr) {
-      // Single day view - show hours/minutes
-      const dayActivities = activities.filter(a => a.activity_date.startsWith(startStr));
-      chartData = dayActivities.map(a => ({
-        name: format(parseISO(a.activity_date), 'HH:mm'),
-        steps: a.steps,
-        timestamp: new Date(a.activity_date).getTime()
-      })).sort((a, b) => a.timestamp - b.timestamp);
+      // Single day view - generate 24 hours
+      const dayActivities = activities.filter(a => {
+        const localDateStr = format(parseUTCDate(a.activity_date), 'yyyy-MM-dd');
+        return localDateStr === startStr;
+      });
+      
+      const hours = eachHourOfInterval({
+        start: startOfDay(startDate),
+        end: endOfDay(startDate)
+      });
+      
+      chartData = hours.map(hourDate => {
+        const hourStr = format(hourDate, 'HH');
+        // Find activities matching this hour
+        const hourSteps = dayActivities.reduce((sum, a) => {
+          const aDate = parseUTCDate(a.activity_date);
+          if (format(aDate, 'HH') === hourStr) {
+            return sum + a.steps;
+          }
+          return sum;
+        }, 0);
+        
+        return {
+          name: format(hourDate, 'MMM dd, HH:mm'),
+          steps: hourSteps,
+          timestamp: hourDate.getTime()
+        };
+      });
     } else {
       // Range view - group by day
       const rangeActivities = activities.filter(a => {
-          const dateStr = a.activity_date.substring(0, 10);
+          const dateStr = format(parseUTCDate(a.activity_date), 'yyyy-MM-dd');
           return dateStr >= startStr && dateStr <= endStr;
       });
       
       const grouped = rangeActivities.reduce((acc, a) => {
-        const dateStr = format(parseISO(a.activity_date), 'MMM dd');
+        const dateStr = format(parseUTCDate(a.activity_date), 'yyyy-MM-dd');
         if (!acc[dateStr]) acc[dateStr] = 0;
         acc[dateStr] += a.steps;
         return acc;
       }, {});
       
-      chartData = Object.keys(grouped).map(date => ({
-        name: date,
-        steps: grouped[date]
-      }));
+      const days = eachDayOfInterval({ start: startDate, end: endDate });
+      chartData = days.map(dayDate => {
+        const dayStr = format(dayDate, 'yyyy-MM-dd');
+        return {
+          name: format(dayDate, 'MMM dd'),
+          steps: grouped[dayStr] || 0,
+          timestamp: dayDate.getTime()
+        };
+      });
     }
   } else {
     // All time view - group by day
     const grouped = activities.reduce((acc, a) => {
-      const dateStr = format(parseISO(a.activity_date), 'MMM dd');
+      const dateStr = format(parseUTCDate(a.activity_date), 'yyyy-MM-dd');
       if (!acc[dateStr]) acc[dateStr] = 0;
       acc[dateStr] += a.steps;
       return acc;
     }, {});
     
-    chartData = Object.keys(grouped).map(date => ({
-      name: date,
-      steps: grouped[date]
-    }));
+    if (Object.keys(grouped).length > 0) {
+      const dates = Object.keys(grouped).sort();
+      const firstDate = parseISO(dates[0]);
+      const lastDate = parseISO(dates[dates.length - 1]);
+      const days = eachDayOfInterval({ start: firstDate, end: lastDate });
+      
+      chartData = days.map(dayDate => {
+        const dayStr = format(dayDate, 'yyyy-MM-dd');
+        return {
+          name: format(dayDate, 'MMM dd'),
+          steps: grouped[dayStr] || 0,
+          timestamp: dayDate.getTime()
+        };
+      });
+    }
   }
 
   return (
@@ -341,15 +395,24 @@ const Dashboard = () => {
           <div className="h-80 w-full">
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 50, left: 0 }}>
                   <Line type="monotone" dataKey="steps" stroke="#34d399" strokeWidth={3} dot={{ r: 4, fill: '#34d399', strokeWidth: 2 }} activeDot={{ r: 6 }} />
                   <CartesianGrid stroke="#1e293b" strokeDasharray="5 5" vertical={false} />
-                  <XAxis dataKey="name" stroke="#64748b" tick={{fill: '#64748b'}} axisLine={false} tickLine={false} />
+                  <XAxis 
+                    dataKey="name" 
+                    stroke="#64748b" 
+                    tick={{fill: '#64748b', fontSize: 12}} 
+                    angle={-45}
+                    textAnchor="end"
+                    height={60}
+                    axisLine={true} 
+                    tickLine={true} 
+                  />
                   <YAxis 
                     stroke="#64748b" 
                     tick={{fill: '#64748b'}} 
-                    axisLine={false} 
-                    tickLine={false} 
+                    axisLine={true} 
+                    tickLine={true} 
                     domain={[0, 'auto']}
                     allowDecimals={false}
                     tickFormatter={(value) => {

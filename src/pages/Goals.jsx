@@ -25,6 +25,9 @@ const Goals = () => {
       setGoals(response.data);
     } catch (error) {
       console.error('Failed to fetch goals:', error);
+      if (error.response?.status !== 404 && error.response?.status !== 500) {
+        setGoals([]); // Just set empty goals if server crashes
+      }
     } finally {
       setLoading(false);
     }
