@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Flame, Trophy, Activity, Plus, X, Download, Target, Calendar, Star, BrainCircuit, MessageSquare, Coffee } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, startOfDay, endOfDay, startOfWeek, endOfWeek, subDays } from 'date-fns';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 
@@ -13,8 +13,10 @@ const Dashboard = () => {
   const [aiLoading, setAiLoading] = useState(false);
   const [gamification, setGamification] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [dateRange, setDateRange] = useState([new Date(), new Date()]);
+  const [timespanType, setTimespanType] = useState('week'); // 'day', 'week', 'custom'
+  const [dateRange, setDateRange] = useState([startOfWeek(new Date()), endOfWeek(new Date())]);
   const [startDate, endDate] = dateRange;
+  const [showTimespanMenu, setShowTimespanMenu] = useState(false);
 
   const formatNumber = (num) => {
     if (num === null || num === undefined) return 0;
@@ -257,26 +259,82 @@ const Dashboard = () => {
         <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-lg">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 sm:gap-0">
             <h2 className="text-xl font-bold text-white">Recent Activity Trends</h2>
-            <div className="flex items-center bg-slate-950 border border-slate-800 rounded-lg px-3 py-1">
-              <Calendar className="w-4 h-4 text-slate-400 mr-2" />
-              <DatePicker 
-                selectsRange={true}
-                startDate={startDate}
-                endDate={endDate}
-                onChange={(update) => setDateRange(update)}
-                placeholderText="Custom Date Range"
-                dateFormat="MMM d, yyyy"
-                className="bg-transparent text-slate-300 text-sm focus:outline-none focus:ring-0 w-44 cursor-pointer"
-                dayClassName={(date) => 
-                  activities.some(a => a.activity_date.startsWith(format(date, 'yyyy-MM-dd')))
-                    ? "bg-emerald-500 text-white rounded-full"
-                    : undefined
-                }
-              />
-              {(startDate || endDate) && (
-                <button onClick={() => setDateRange([null, null])} className="ml-2 text-slate-500 hover:text-slate-300">
-                  <X className="w-4 h-4" />
+            <div className="relative">
+              {timespanType === 'custom' ? (
+                <div className="flex items-center bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 cursor-pointer transition-colors hover:border-slate-700">
+                  <Calendar className="w-4 h-4 text-slate-400 mr-2" />
+                  <DatePicker 
+                    selectsRange={true}
+                    startDate={startDate}
+                    endDate={endDate}
+                    onChange={(update) => setDateRange(update)}
+                    placeholderText="Select Date Range"
+                    dateFormat="MMM d, yyyy"
+                    className="bg-transparent text-slate-300 text-sm font-medium focus:outline-none focus:ring-0 w-48 cursor-pointer"
+                    dayClassName={(date) => 
+                      activities.some(a => a.activity_date.startsWith(format(date, 'yyyy-MM-dd')))
+                        ? "bg-emerald-500 text-white rounded-full"
+                        : undefined
+                    }
+                  />
+                  <button 
+                    onClick={() => {
+                      setTimespanType('week');
+                      setDateRange([startOfWeek(new Date()), endOfWeek(new Date())]);
+                    }} 
+                    className="ml-2 text-slate-500 hover:text-slate-300 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <button 
+                  onClick={() => setShowTimespanMenu(!showTimespanMenu)}
+                  className="flex items-center bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-lg px-4 py-2 transition-colors"
+                >
+                  <Calendar className="w-4 h-4 text-slate-400 mr-2" />
+                  <span className="text-slate-300 text-sm font-medium">
+                    {timespanType === 'day' ? 'Current Day' : 'Current Week'}
+                  </span>
                 </button>
+              )}
+
+              {showTimespanMenu && timespanType !== 'custom' && (
+                <div className="absolute right-0 mt-2 w-48 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl py-2 z-50 animate-fade-in overflow-hidden">
+                  <div className="px-3 py-1 mb-1 text-xs font-bold text-slate-500 tracking-wider">
+                    TIMESPAN
+                  </div>
+                  <button
+                    onClick={() => {
+                      setTimespanType('day');
+                      setDateRange([startOfDay(new Date()), endOfDay(new Date())]);
+                      setShowTimespanMenu(false);
+                    }}
+                    className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors ${timespanType === 'day' ? 'bg-emerald-500 text-slate-950' : 'text-slate-300 hover:bg-slate-800 hover:text-white'}`}
+                  >
+                    Current Day
+                  </button>
+                  <button
+                    onClick={() => {
+                      setTimespanType('week');
+                      setDateRange([startOfWeek(new Date()), endOfWeek(new Date())]);
+                      setShowTimespanMenu(false);
+                    }}
+                    className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors ${timespanType === 'week' ? 'bg-emerald-500 text-slate-950' : 'text-slate-300 hover:bg-slate-800 hover:text-white'}`}
+                  >
+                    Current Week
+                  </button>
+                  <button
+                    onClick={() => {
+                      setTimespanType('custom');
+                      setDateRange([new Date(), new Date()]);
+                      setShowTimespanMenu(false);
+                    }}
+                    className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors ${timespanType === 'custom' ? 'bg-emerald-500 text-slate-950' : 'text-slate-300 hover:bg-slate-800 hover:text-white'}`}
+                  >
+                    Custom Timespan
+                  </button>
+                </div>
               )}
             </div>
           </div>
