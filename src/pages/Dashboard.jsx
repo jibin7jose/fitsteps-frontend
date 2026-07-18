@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Flame, Trophy, Activity, Plus, X, Download, Target, Calendar, Star, BrainCircuit, MessageSquare, Coffee } from 'lucide-react';
+import { Flame, Trophy, Activity, Plus, X, Download, Target, Calendar, Star, BrainCircuit, MessageSquare, Coffee, ChevronDown } from 'lucide-react';
 import { format, parseISO, startOfDay, endOfDay, startOfWeek, endOfWeek, subDays, eachDayOfInterval, eachHourOfInterval, isSameDay } from 'date-fns';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -347,9 +347,10 @@ const Dashboard = () => {
                   className="flex items-center bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-lg px-4 py-2 transition-colors"
                 >
                   <Calendar className="w-4 h-4 text-slate-400 mr-2" />
-                  <span className="text-slate-300 text-sm font-medium">
+                  <span className="text-slate-300 text-sm font-medium mr-2">
                     {timespanType === 'day' ? 'Current Day' : 'Current Week'}
                   </span>
+                  <ChevronDown className="w-4 h-4 text-slate-400" />
                 </button>
               )}
 
