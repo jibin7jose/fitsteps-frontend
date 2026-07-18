@@ -13,7 +13,8 @@ const Dashboard = () => {
   const [aiLoading, setAiLoading] = useState(false);
   const [gamification, setGamification] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [dateRange, setDateRange] = useState([new Date(), new Date()]);
+  const [startDate, endDate] = dateRange;
 
   const formatNumber = (num) => {
     if (num === null || num === undefined) return 0;
@@ -115,15 +116,39 @@ const Dashboard = () => {
   // Format chart data
   let chartData = [];
   
-  if (selectedDate) {
-    const dateStr = format(selectedDate, 'yyyy-MM-dd');
-    const dayActivities = activities.filter(a => a.activity_date.startsWith(dateStr));
+  if (startDate && endDate) {
+    const startStr = format(startDate, 'yyyy-MM-dd');
+    const endStr = format(endDate, 'yyyy-MM-dd');
     
-    chartData = dayActivities.map(a => ({
-      name: format(parseISO(a.activity_date), 'HH:mm'),
-      steps: a.steps
-    }));
+    if (startStr === endStr) {
+      // Single day view - show hours/minutes
+      const dayActivities = activities.filter(a => a.activity_date.startsWith(startStr));
+      chartData = dayActivities.map(a => ({
+        name: format(parseISO(a.activity_date), 'HH:mm'),
+        steps: a.steps,
+        timestamp: new Date(a.activity_date).getTime()
+      })).sort((a, b) => a.timestamp - b.timestamp);
+    } else {
+      // Range view - group by day
+      const rangeActivities = activities.filter(a => {
+          const dateStr = a.activity_date.substring(0, 10);
+          return dateStr >= startStr && dateStr <= endStr;
+      });
+      
+      const grouped = rangeActivities.reduce((acc, a) => {
+        const dateStr = format(parseISO(a.activity_date), 'MMM dd');
+        if (!acc[dateStr]) acc[dateStr] = 0;
+        acc[dateStr] += a.steps;
+        return acc;
+      }, {});
+      
+      chartData = Object.keys(grouped).map(date => ({
+        name: date,
+        steps: grouped[date]
+      }));
+    }
   } else {
+    // All time view - group by day
     const grouped = activities.reduce((acc, a) => {
       const dateStr = format(parseISO(a.activity_date), 'MMM dd');
       if (!acc[dateStr]) acc[dateStr] = 0;
@@ -235,19 +260,21 @@ const Dashboard = () => {
             <div className="flex items-center bg-slate-950 border border-slate-800 rounded-lg px-3 py-1">
               <Calendar className="w-4 h-4 text-slate-400 mr-2" />
               <DatePicker 
-                selected={selectedDate}
-                onChange={(date) => setSelectedDate(date)}
-                placeholderText="Select Date"
+                selectsRange={true}
+                startDate={startDate}
+                endDate={endDate}
+                onChange={(update) => setDateRange(update)}
+                placeholderText="Custom Date Range"
                 dateFormat="MMM d, yyyy"
-                className="bg-transparent text-slate-300 text-sm focus:outline-none focus:ring-0 w-28 cursor-pointer"
+                className="bg-transparent text-slate-300 text-sm focus:outline-none focus:ring-0 w-44 cursor-pointer"
                 dayClassName={(date) => 
                   activities.some(a => a.activity_date.startsWith(format(date, 'yyyy-MM-dd')))
                     ? "bg-emerald-500 text-white rounded-full"
                     : undefined
                 }
               />
-              {selectedDate && (
-                <button onClick={() => setSelectedDate(null)} className="ml-2 text-slate-500 hover:text-slate-300">
+              {(startDate || endDate) && (
+                <button onClick={() => setDateRange([null, null])} className="ml-2 text-slate-500 hover:text-slate-300">
                   <X className="w-4 h-4" />
                 </button>
               )}
