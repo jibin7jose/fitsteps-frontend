@@ -6,15 +6,33 @@ export const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('access_token'));
   const [isAuthenticated, setIsAuthenticated] = useState(!!token);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     setIsAuthenticated(!!token);
     if (token) {
       localStorage.setItem('access_token', token);
+      fetchUser();
     } else {
       localStorage.removeItem('access_token');
+      setUser(null);
     }
   }, [token]);
+
+  const fetchUser = async () => {
+    try {
+      const response = await api.get('/leaderboard/');
+      const currentUser = response.data.find(u => u.is_current_user);
+      if (currentUser) {
+        setUser({ name: currentUser.name.replace(' (You)', '') });
+      }
+    } catch (error) {
+      console.error('Failed to fetch user:', error);
+      if (error.response?.status === 401) {
+        logout();
+      }
+    }
+  };
 
   const login = async (username, password) => {
     const formData = new URLSearchParams();
@@ -39,7 +57,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ token, isAuthenticated, login, register, logout }}>
+    <AuthContext.Provider value={{ token, isAuthenticated, user, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

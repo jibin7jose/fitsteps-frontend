@@ -1,12 +1,27 @@
-import React, { useContext } from 'react';
+import React, { useContext, useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { Activity, LogOut, LayoutDashboard, Target, Users, Menu, X } from 'lucide-react';
+import { Activity, LogOut, LayoutDashboard, Target, Users, Menu, X, ChevronDown } from 'lucide-react';
 
 const Navbar = () => {
-  const { logout } = useContext(AuthContext);
+  const { logout, user } = useContext(AuthContext);
   const navigate = useNavigate();
-  const [isOpen, setIsOpen] = React.useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -38,13 +53,31 @@ const Navbar = () => {
               <Users className="w-4 h-4 mr-2" />
               Leaderboard
             </Link>
-            <button 
-              onClick={handleLogout}
-              className="ml-4 bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-lg text-sm font-medium flex items-center border border-slate-700 transition-colors"
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign Out
-            </button>
+            
+            <div className="relative ml-4" ref={dropdownRef}>
+              <button 
+                onClick={() => setDropdownOpen(!dropdownOpen)}
+                className="flex items-center space-x-2 text-slate-300 hover:text-white focus:outline-none transition-colors"
+              >
+                <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-300 font-bold border border-slate-700 text-sm">
+                  {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                </div>
+                <span className="text-sm font-medium hidden lg:block">{user?.name || 'User'}</span>
+                <ChevronDown className="w-4 h-4" />
+              </button>
+
+              {dropdownOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-slate-900 border border-slate-800 rounded-lg shadow-lg py-1 z-50">
+                  <button 
+                    onClick={() => { setDropdownOpen(false); handleLogout(); }}
+                    className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-slate-800 hover:text-red-300 flex items-center transition-colors"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sign Out
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
           
           <div className="md:hidden flex items-center">
