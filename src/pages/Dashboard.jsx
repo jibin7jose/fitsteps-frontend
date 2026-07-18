@@ -222,7 +222,7 @@ const Dashboard = () => {
     <div className="min-h-screen bg-slate-950 text-slate-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4 sm:gap-0">
-          <h1 className="text-3xl font-bold text-white">Your Dashboard</h1>
+          <h1 className="text-3xl font-bold text-white">Dashboard</h1>
           <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
             <button 
               onClick={handleExportCSV}

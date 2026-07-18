@@ -34,7 +34,7 @@ function Achievements() {
   return (
     <div className="max-w-4xl mx-auto p-4 space-y-8 animate-fade-in">
       <div className="text-center space-y-4">
-        <h1 className="text-4xl font-bold text-white tracking-tight">Your Achievements</h1>
+        <h1 className="text-4xl font-bold text-white tracking-tight">Achievements</h1>
         <p className="text-slate-400">Track your progress and collect badges as you reach your fitness goals.</p>
       </div>
 
